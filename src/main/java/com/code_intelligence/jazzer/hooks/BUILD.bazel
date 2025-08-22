@@ -1,0 +1,10 @@
+java_library(
+    name = "custom_hooks",
+    srcs = [
+        "ExampleFuzzerHooks.java",
+    ],
+    deps = [
+        "//src/main/java/com/code_intelligence/jazzer/api:hooks",
+    ],
+    visibility = ["//visibility:public"],
+)

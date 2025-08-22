@@ -160,6 +160,7 @@ public class InstrumentationConfig {
         addOptionIfNotEmpty(disabledHooks, "--disabled_hooks=", jazzerOpts);
         addOptionIfNotEmpty(includeFilter, "--instrumentation_includes=", jazzerOpts);
         addOptionIfNotEmpty(excludeFilter, "--instrumentation_excludes=", jazzerOpts);
+        addOptionIfNotEmpty(customHooks, "--custom_hooks=", jazzerOpts);
         jazzerOpts.add("--dump_classes_dir=" + dumpClassesDir.toString());
     }
 
@@ -210,8 +211,9 @@ public class InstrumentationConfig {
     }
 
     private void parseCustomHooks(JsonArray hooksArray) {
-        // TODO: Add support for custom_hooks
-        logger.warning("custom_hooks option is not enabled yet.");
+        for(JsonElement el : hooksArray){
+            customHooks.add(el.getAsString());
+        }
     }
 
     private void addOptionIfNotEmpty(List<String> list, String flag, List<String> jazzerOpts) {

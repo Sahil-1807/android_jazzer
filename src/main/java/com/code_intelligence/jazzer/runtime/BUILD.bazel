@@ -19,6 +19,7 @@ java_library(
     runtime_deps = [
         ":runtime",
         "//sanitizers",
+        "//src/main/java/com/code_intelligence/jazzer/hooks:custom_hooks",
     ],
 )
 
