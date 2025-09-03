@@ -16,21 +16,28 @@ package com.code_intelligence.jazzer.agent;
 
 import static com.code_intelligence.jazzer.agent.AgentUtils.extractBootstrapJar;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.jar.JarFile;
+import java.util.logging.Logger;
+
+import com.code_intelligence.jazzer.android.InstrumentationConfig;
+
 import net.bytebuddy.agent.ByteBuddyAgent;
 
 public class AgentInstaller {
   private static final AtomicBoolean hasBeenInstalled = new AtomicBoolean();
-
+  private static final Logger logger = Logger.getLogger(AgentInstaller.class.getName());
   /**
    * Appends the parts of Jazzer that have to be visible to all classes, including those in the Java
    * standard library, to the bootstrap class loader path. Additionally, if enableAgent is true,
    * also enables the Jazzer agent that instruments classes for fuzzing.
    */
-  public static void install(boolean enableAgent) {
+  public static void install(boolean enableAgent, String customHooksJarPath) {
     // Only install the agent once.
     if (!hasBeenInstalled.compareAndSet(false, true)) {
       return;
@@ -38,6 +45,25 @@ public class AgentInstaller {
 
     Instrumentation instrumentation = ByteBuddyAgent.install();
     instrumentation.appendToBootstrapClassLoaderSearch(extractBootstrapJar());
+
+    if (customHooksJarPath != null && !customHooksJarPath.isBlank()) {
+      try {
+        File hooksJar = new File(customHooksJarPath);
+        if (!hooksJar.exists()) {
+          logger.warning("Custom hooks jar not found at: " + customHooksJarPath 
+              + ". Continuing without custom hooks.");
+        } else {
+          instrumentation.appendToBootstrapClassLoaderSearch(new JarFile(hooksJar));
+          logger.info("Added external hooks jar to bootstrap: " + customHooksJarPath);
+        }
+      } catch (IOException e) {
+        logger.warning("Warning: Failed to add external hooks jar (" 
+            + customHooksJarPath + ") — " + e.getMessage());
+      }
+    } else {
+      System.out.println("No custom hooks jar path provided. Skipping external hooks.");
+    }
+
     if (!enableAgent) {
       return;
     }

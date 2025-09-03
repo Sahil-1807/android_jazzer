@@ -101,6 +101,8 @@ public class InstrumentationConfig {
     private final String JAZZER_HOOKS = "jazzer_hooks";
     private final String INSTRUMENTATION_FILTERS = "instrumentation_filters";
     private final String CUSTOM_HOOKS = "custom_hooks";
+    private final String CUSTOM_HOOKS_CLASSES = "custom_hooks_classes";
+    private final String CUSTOM_HOOKS_JAR_PATH = "custom_hooks_jar_path";
     private final String INCLUDE_FILTER = "include_filter";
     private final String EXCLUDE_FILTER = "exclude_filter";
     private final String DISABLED_HOOKS = "disabled_hooks";
@@ -109,7 +111,10 @@ public class InstrumentationConfig {
     private final Map<String, Boolean> hookStates = new HashMap<>();
     private final List<String> includeFilter = new ArrayList<>();
     private final List<String> excludeFilter = new ArrayList<>();
+    private final List<String> customHooksClasses = new ArrayList<>();
     private final Path dumpClassesDir;
+
+    private String customHooksJarPath;
 
     public InstrumentationConfig() {
         // Disable all the hooks by default
@@ -137,7 +142,9 @@ public class InstrumentationConfig {
                         parseInstrumentationFilter(json.getAsJsonObject(key));
                         break;
                     case CUSTOM_HOOKS:
-                        parseCustomHooks(json.getAsJsonArray(key));
+                        JsonObject hooksObj = json.getAsJsonObject(key);
+                        parseCustomHooksClasses(hooksObj);
+                        parseCustomHooksJarPath(hooksObj);
                         break;
                     default:
                         logger.warning("Unsupported top-level config entry: " + key);
@@ -161,6 +168,13 @@ public class InstrumentationConfig {
         addOptionIfNotEmpty(includeFilter, "--instrumentation_includes=", jazzerOpts);
         addOptionIfNotEmpty(excludeFilter, "--instrumentation_excludes=", jazzerOpts);
         jazzerOpts.add("--dump_classes_dir=" + dumpClassesDir.toString());
+    }
+
+    public String getCustomHooksJarPath() {
+        if(customHooksJarPath == null){
+            logger.warning("custom hooks jar path has not provided.");
+        }
+        return customHooksJarPath;
     }
 
     private void parseJazzerHooks(JsonObject hooksObj) {
@@ -209,10 +223,25 @@ public class InstrumentationConfig {
         }
     }
 
-    private void parseCustomHooks(JsonArray hooksArray) {
-        // TODO: Add support for custom_hooks
-        logger.warning("custom_hooks option is not enabled yet.");
+    private void parseCustomHooksClasses(JsonObject hooksObj) {
+        if (hooksObj.has(CUSTOM_HOOKS_CLASSES)) {
+            JsonArray hooksArray = hooksObj.getAsJsonArray(CUSTOM_HOOKS_CLASSES);
+            for (JsonElement el : hooksArray) {
+                customHooksClasses.add(el.getAsString());
+            }
+        } else {
+            logger.warning("Expected 'custom_hooks_classes' entry not found in custom_hooks config.");
+        }
     }
+
+    private void parseCustomHooksJarPath(JsonObject hooksObj) {
+        if (hooksObj.has(CUSTOM_HOOKS_JAR_PATH)) {
+            customHooksJarPath = hooksObj.get(CUSTOM_HOOKS_JAR_PATH).getAsString();
+        } else {
+            logger.warning("Expected 'custom_hooks_jar_path' entry not found in custom_hooks config.");
+        }
+    }
+
 
     private void addOptionIfNotEmpty(List<String> list, String flag, List<String> jazzerOpts) {
         if (list != null && !list.isEmpty()) {

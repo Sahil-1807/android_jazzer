@@ -23,6 +23,7 @@ import main.java.com.code_intelligence.jazzer.android.InstrumentationConfig;
 import com.code_intelligence.jazzer.driver.OfflineInstrumentor;
 import com.code_intelligence.jazzer.driver.Opt;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ClassNotFoundException;
@@ -37,19 +38,20 @@ import java.util.logging.Logger;
 
 public class R8Wrapper {
   private static final Logger logger = Logger.getLogger(R8Wrapper.class.getName());
+  private static String CUSTOM_HOOKS_JAR_PATH;
 
   private static void setOptions() throws Exception {
     List<String> jazzerOpts = new ArrayList<>();
     // default config object will have all the default hooks disabled
     InstrumentationConfig config = new InstrumentationConfig();
 
-    InputStream input = R8Wrapper.class
-        .getClassLoader()
-        .getResourceAsStream("com/code_intelligence/jazzer/android/jazzer_instrumentation_config.json");
+    File configFile = new File("prebuilts/jazzer/jazzer_instrumentation_config.json");
 
-    if (input != null) {
-      try (InputStream in = input) {
-        config.updateFromJson(in);
+    CUSTOM_HOOKS_JAR_PATH = "";
+    if (configFile.exists()) {
+      try (FileInputStream fis = new FileInputStream(configFile)) {
+        config.updateFromJson(fis);
+        CUSTOM_HOOKS_JAR_PATH = config.getCustomHooksJarPath();
       }
     } else {
       logger.info("No instrumentation config found — using default config.");
@@ -71,7 +73,7 @@ public class R8Wrapper {
 
       // found com.android.tools.r8warpper.R8Wrapper
       // don't add native libs, we are in AOSP and Soong has special code for this
-      boolean instrumentationSuccess = OfflineInstrumentor.instrumentJars(jarfiles, false);
+      boolean instrumentationSuccess = OfflineInstrumentor.instrumentJars(jarfiles, false, CUSTOM_HOOKS_JAR_PATH);
       if (!instrumentationSuccess) {
         exit(1);
       }
